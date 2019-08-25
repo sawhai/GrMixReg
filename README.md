@@ -4,6 +4,7 @@ Group Mixture of Regressions
 The source code to reproduce the simulation study for GMR.
 
 GMR.K2.d2.R is the simulation code for the case k = 2 and dimension = 2.
+
 GMR.K4.d4.R is the simulation code for the case k = 4 and dimension = 4.
 GMR_data_gen.R is the code for generating the data (called by GMR.K2.d2.R and GMR.K4.d4.R)
 NMI.AMI.calc.fn.R is the code for NMI and AMI calculation (called by GMR.K2.d2.R and GMR.K4.d4.R)
