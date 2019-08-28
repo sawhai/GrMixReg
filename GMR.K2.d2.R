@@ -1,16 +1,21 @@
 # Fit GMR for K = 2, d = 2
 
 rm(list=ls())
-cat("\014")  #Clear the screen
-library('MASS')
-library('ggplot2')
-library('caret')
-library('miscTools')
-library('plyr')
-setwd("~/Documents/Gr.EM/Delivarable/")
-source('GMR_data_gen.R')
-source('fit_GMR.R')
-source('NMI.AMI.calc.fn.R')
+# cat("\014")  #Clear the screen
+library(MASS)
+library(ggplot2)
+library(caret)
+library(miscTools)
+library(plyr)
+require(gtools)
+library(e1071)
+
+# setwd("~/Documents/Gr.EM/Delivarable/")
+source('modules/GMR_data_gen.R')
+source('modules/fit_GMR.R')
+source('modules/NMI.AMI.calc.fn.R')
+
+
 K = 2
 N <- c(3e2, 3e2)  #Number of observations for each component
 R <- c(10 ,10) #Number of groups in each component
@@ -20,21 +25,24 @@ d <- 2
 noise <- seq(2,10,2)
 bet.dist <- c(2.3,4.6,6.9)
 l1 <- length(noise); l2 <- length(bet.dist)
-n.runs= 250
+n.runs <- 5
 fin.res <- data.table(N1 =rep(N[1],(n.runs*l1*l2)),N2 =N[2],R1 = R[1], R2 =R[2],noise_level = 0,
                       r.bt.cl1.1 =0, r.bt.cl1.2 = 0, e.bt.cl1.1 = 0,e.bt.cl1.2=0,r.bt.cl2.1 =0,r.bt.cl2.2=0, 
                       e.bt.cl2.1 = 0,e.bt.cl2.2=0, corr.cl.rate = 0,bt.dist=0,num.itr = 0,nmi=0,b.err=0,RMSE = 0)
 
-require('gtools')
-perm <- permutations(K,K,seq(1:K))
+
+perm <- gtools::permutations(K,K,seq(1:K))
 t.r <- 1
 cols <- c('x1','x2','Y')
 res1 <- data.table(Groups= 1:Rtot, Clust = 0)
 Conf <- list() #Holds the confusion matrices
+total_num_iter <- n.runs*l1*l2
 for(n.rn in 1: n.runs){
   for(n in 1:l1){
     for(r in 1:l2){
-      cat('Run    ', t.r,'\n', '---------------','\n')
+      cat(sprintf('Run %4d out of %d\n', t.r, total_num_iter)) 
+      
+      
       d1 <- data_gen(K,N,R,bet.dist[r],d,noise[n])
       fin.res[t.r,noise_level:=noise[n]]
       X <- d1$X
@@ -47,20 +55,23 @@ for(n.rn in 1: n.runs){
       fin.res[t.r,c('r.bt.cl1.1','r.bt.cl1.2'):=as.list(bets[,1])]
       fin.res[t.r,c('r.bt.cl2.1','r.bt.cl2.2'):=as.list(bets[,2])]
       fin.res[t.r,bt.dist := d1$dist]
+      
+      
       # Applying the algorithm --------
       nr <- as.vector(table(dat$idx))
-      f1 <- fit_grp_mix_reg(dat, K=2, d=2, n.gr=Rtot, nr=nr)
+      f1 <- fit_grp_mix_reg(dat, K=2, d=2, n.gr=Rtot, nr=nr, VERB=F)
       res1[,Clust:=apply(f1$tau,1,which.max)]
       
-      cat('\n')
+      #cat('\n')
       #r1 <- data.table(Group = )
       #setnames(r1,c('Group','Clust','min.AIC'))
-      fin.res[t.r,num.itr := f1$n.itr]
+      fin.res[t.r, num.itr := f1$n.itr]
       #Save the true labels for each group
-      th.cl <- X[,.(tru.label,idx),by=.(tru.label,idx)]
+      th.cl <- X[ , .(tru.label,idx), by=.(tru.label,idx)]
       # The columns are repeated (delete a pair)
-      th.cl[,`:=`(tru.label=NULL,idx=NULL)]
+      th.cl[,`:=`(tru.label=NULL, idx=NULL)]
       corr.cl.rate = vector()
+      
       #Try all the permutations for cluster assignment and get the max of it
       for(ic in 1:(nrow(perm))){
         #swap the values for all the permutations
