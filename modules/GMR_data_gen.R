@@ -1,9 +1,4 @@
 #Functions that are called for generating data
-
-library('Metrics')
-library('plotrix')
-library('psych')
-
 #To generate response (called by data_gen)
 grp_mix_reg_gen_response <- function(dat, d, bets, clust, noise_sig) {
   # Generate response. More general. Changes "dat" in place (pass by reference)

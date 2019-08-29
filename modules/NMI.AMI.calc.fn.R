@@ -1,4 +1,4 @@
-require(infotheo)
+# Function to calcilate NMI and AMI
 
 f_nij <- function(v1,v2,l1,l2){     #contingency table n(i,j)=t(i,j)
   m <- matrix(0,l1,l2)
