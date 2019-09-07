@@ -1,5 +1,5 @@
 rm(list=ls())
-setwd("/Users/ha/Documents/Gr.EM/")
+# setwd("/Users/ha/Documents/Gr.EM/")
 res <- get(load('pred_compare.RData'))
 
 library('data.table')

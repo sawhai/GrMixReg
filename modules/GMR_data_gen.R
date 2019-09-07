@@ -15,7 +15,7 @@ grp_mix_reg_gen_response <- function(dat, d, bets, clust, noise_sig) {
 }
 
 #Data preparation ------
-# K:= #of components
+# K   := number of components
 # # R := vector containing Number of groups in each component
 # # r := value to control the distance between betas
 # # noise_level := noise signal when generating y
