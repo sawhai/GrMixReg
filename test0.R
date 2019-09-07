@@ -1,55 +1,40 @@
-rm(list=ls())
 library(dplyr)
-#library(clue)
+# library(clue)
 source('modules/GMR_data_gen2.R')
 source('modules/fit_GMR.R')
+source('modules/network_commons.R')
 
-K <- 2
-d <- 2
-N_all <- rep(3e2,K)  #Number of observations for each component
-R <- c(10 ,10) #Number of groups in each component
-Rtot <- sum(R)  #Total number of groups
-# 24 out of 30 (80%) observations per group for training, 6 for testing:
-N <- rep(240,K) #Number of observations for each component for training
+K <- 3
+d <- 8
+N <- rep(3e2, K)  # Number of observations for each component
+R <- rep(10, K)   # Number of groups in each component
+Rtot <- sum(R)    # Total number of groups
 
-compute_nmi <- function (label1, label2){
-  require(clue)
-  cl_agreement(as.cl_hard_partition(label1), as.cl_hard_partition(label2), method = 'NMI') 
-}
-
-rmse <- function(actual, predicted) sqrt(mean((actual - predicted)^2))
+# compute_nmi <- function (label1, label2){
+#   #require(clue)
+#   cl_agreement(as.cl_hard_partition(label1), as.cl_hard_partition(label2), method = 'NMI') 
+# }
 
 # combinations used in simulation
-runs <- expand.grid(run_id=1:5, bet_dist=c(2.3,4.6,6.9), noise_lev=seq(2,10,2))
-runs$nmi <- 0; runs$n_iter <- 0; runs$RMSE <- 0
+total_num_runs <- 5
+runs <- expand.grid(run_id=1:total_num_runs, bet_dist=c(2,4,6), noise_lev=seq(2,10,2))
+
 # Run the simulations
 for (r in 1:nrow(runs)) {
       cat(sprintf('Run %4d out of %d\n', r, nrow(runs))) 
       run <- runs[r,]
-      out <- data_gen(K, N_all, R, run$bet_dist, d, run$noise_lev)
+      out <- data_gen(K, N, R, run$bet_dist, d, run$noise_lev, VERB=F)
       dat <- out$data
-      # Randomly pick 6 observations from each group (idx) for testing
-      tst_idx <- sample(1:(N_all[1]/R[1]),6)
-      dat_tr = dat[,.SD[!tst_idx], by = idx] #Training data 
-      tst = dat[,.SD[tst_idx], by = idx] #Test data
-      setcolorder(dat_tr,names(dat)) #Change the order of the columns
-      setcolorder(tst,names(dat))
-      #idx.tst <- tst[,'idx',with=F]  #Test indecis
-      
       bets <- out$bets
-      runs[r,'bet_dist'] <- out$dist
       tru_label <- out$tru_label
       nr <- as.vector(table(dat$idx))
-      # Fit GMR to training data
-      fit <- fit_grp_mix_reg(dat_tr, K=2, d=2, n.gr=Rtot, nr=nr, VERB=F)
+      fit <- fit_grp_mix_reg(dat, K=K, d=d, n.gr=Rtot, nr=nr, VERB=F)
       
       est_group_label <- apply(fit$tau, 1, which.max) # cluster assignment for groups
       est_label <- est_group_label[dat$idx] # cluster assignment of individual obs.
-      runs[r,"nmi"] <-  compute_nmi(tru_label, est_label) 
+      # runs[r,"nmi"] <-  compute_nmi(tru_label, est_label)
+      runs[r,"nmi"] <-  compute_mutual_info(tru_label, est_label) 
       runs[r,"n_iter"] <- fit$n.itr
-      yh <- predict_GMR(K, fit, tst) # Predict the hold out set
-      y.err <- rmse(as.matrix(tst[,'Y']),yh) #RMSE error
-      runs[r,'RMSE'] <- y.err
 }
 
 # Calculate the averages

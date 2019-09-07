@@ -1,10 +1,12 @@
 #Functions that are called for generating data
+library(MASS)
 #To generate response (called by data_gen)
 grp_mix_reg_gen_response <- function(dat, d, bets, clust, noise_sig) {
   # Generate response. More general. Changes "dat" in place (pass by reference)
   K = clust
   n_k <- nrow(dat)
-  Mu_k <- as.matrix(dat[, 1:d, with=F]) %*% bets[K,]  
+  # Mu_k <- as.matrix(dat[, 1:d, with=F]) %*% bets[K,]
+  Mu_k <- as.matrix(dat[, 1:d, with=F]) %*% bets[ , K]  
   noise_k <- noise_sig*rnorm(n_k)
   y <- Mu_k + noise_k
   # dat[, Mu := Mu_k]
@@ -20,9 +22,9 @@ grp_mix_reg_gen_response <- function(dat, d, bets, clust, noise_sig) {
 # # r := value to control the distance between betas
 # # noise_level := noise signal when generating y
 # # d := dimension (number) of covariates
-data_gen <- function(K, N, R, r, d, noise_level, normalize=T){
+data_gen <- function(K, N, R, r, d, noise_level, normalize=T, VERB=T){
   
-  Rtot <- sum(R)  #Total number of groups
+  # Rtot <- sum(R)  #Total number of groups
   cumsumR <- cumsum(c(0,R))
   mu <- matrix(0,ncol = d, nrow = K)  #Matrix to hold the means
   sig2 <- abs(rnorm(K,1,0))
@@ -39,9 +41,10 @@ data_gen <- function(K, N, R, r, d, noise_level, normalize=T){
   # for(i in 1:K){
   #   sigma[[i]] <- gen_scaled_Wishart(50, d)
   # }
-  B <- generate_equidistant_pts(d,K,r) #Get the points
+  B <- generate_equidistant_pts(d, K, r, VERB=VERB) #Get the points
+  
   #Normalize them
-  dist <- round(norm(B[,1]-B[,2],type='2'))
+  dist <- ceiling(norm(B[,1]-B[,2],type='2'))
   #Generate the grouped data
   X <- list()
   #index <- list()
@@ -91,12 +94,13 @@ rotation = function(x,y){
 
 scalar1 <- function(x) {x / sqrt(sum(x^2))}
 ##################################################################
-#Funtion to generate equidistance points used to generate betas
-#dim := the dimension of the betas
-#num.pts := number of betas that we wish to generate
-#rd := the disired distance between the points
-generate_equidistant_pts <- function(dim,num.pts,rd){
-  #desired distance 
+# Funtion to generate equidistance points used to generate betas
+# dim      := the dimension of the betas
+# num.pts  := number of betas that we wish to generate
+# rd       := the disired distance between the points
+# VERB     := (True/Fale) Print diagnostics
+generate_equidistant_pts <- function(dim, num.pts, rd, VERB=T){
+  
   dns = 2   #initial distance between pair of points
   pns <- matrix(rep(0,dim*(dim+1)),ncol=(dim+1))   #matrix to hold the points on its columns
   pns[,1] <- c(1,rep(0,(dim-1))); pns[,2] <- c(-1,rep(0,(dim-1))) #initialize the first two points
@@ -115,13 +119,59 @@ generate_equidistant_pts <- function(dim,num.pts,rd){
   #Rotate
   #create two normalized random points to calculate the rotation matrix
   a1 <- scalar1(runif(dim,-2,2)); a2 <- scalar1(runif(dim,-2,2))  
+  
   #Calculate the rotation matrix
   Rot.mat <- rotation(a1,a2)
   p <- Rot.mat %*% pns #Rotate the points
+  
   #randomly pick whatever number of points you desire
   u <- sample(1:(dim+1),num.pts)
   p <- p[,u]
+  
+  # center the points and rescale to have the desired distance
+  curr_dist <- sqrt(sum((p[,1] - p[,2])^2))
+  p <- (rd/curr_dist) * sweep(p,1, rowMeans(p),"-")
+  
+  # print diagnostic: see if the points are really equi-distant
+  if (VERB) {
+    pwdist <- dist(t(p)) # pairwise distances of columns of B
+    pwd_dist_cv <- sd(pwdist)/mean(pwdist)
+    cat("Coeff of Var. of pairwaise distnces of points =", ifelse(is.na(pwd_dist_cv), 0, pwd_dist_cv),"\n")
+    cat("dist(p[,1], p[,2]) =", pwdist[1],"\n")
+  }  
+    
   p
   
 }
+
+# Function to predict a hold out set using GMR
+# k: number of clusters
+# GMR_fit: a GMR object resulted from fitting GMR 
+# test_set: a hold out set in the form generated from data_gen routine
+
+predict_GMR <- function(k, GMR_fit, test_set){
+  #Exctract betas
+  for(i in 1:k){
+    assign(paste0('beta',i),GMR_fit$beta[[i]])
+  }
+  yh <- list() #List that holds the yhat for each group
+  for(i in 1:length(unique(test_set$idx))){
+    for(j in 1:k){
+      #y1 ,... , yk is Xnew * beta_rk *tau_rk
+      assign(paste0('y',j),as.matrix(test_set[idx==i,!c('Y','idx'),with=F]) %*% 
+               as.matrix(get(paste0('beta',j)))*GMR_fit$tau[i,j])
+    }
+    #ytemp = sum from 1:K for y1 to yk obtained in previous loop
+    ytemp <- rep(0,nrow(test_set[idx==i]))
+    for(h in 1:K){
+      ytemp <- ytemp+get(paste0('y',h))
+    }
+    # yh[[i]] is the MAP for Xnew that comes from group i
+    yh[[i]] <- ytemp
+  }
+  yh <- unlist(yh)
+  yh
+}
+
+
 
