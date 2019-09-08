@@ -92,7 +92,24 @@ fit_grp_mix_reg <- function(dat, K, d, n.gr, nr, max.itr=1000, pi=NA, tau_init=N
   return( list(tau=tau, beta=betah, sig2=sig2, pi=pi, Erk=Erk, tau_init=tau_init, n.itr = n.itr) )
 }
 
-
+predict_gmr <- function(dat, tau, bet) {
+  # bet  is d x K, is the matrix whose columns are beta's
+  # dat  n-by-at least (d+1): At least d columns should be name x1, x2, ..., xd as covariates 
+  #   There should also be an "idx" column.
+  # tau is the n x K of soft labels for each of the "n" observations
+  
+  xcols <- paste0("x",1:d)
+  max_idx <- max(dat$idx)
+  
+  bet_mix <- bet %*% t( tau )
+  
+  dat[, `:=`(id, 1:.N)]
+  for(i in 1:max_idx) {
+     temp = as.matrix(dat[idx == i,..xcols]) %*% bet_mix[,i]
+     dat[idx == i, Yh := temp]
+  }
+  
+}
 
 ones <- function(m,n) matrix(rep(1,m*n),nrow=m)
 zeros <- function(m,n) matrix(rep(0,m*n),nrow=m)

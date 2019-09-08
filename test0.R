@@ -7,16 +7,19 @@ source('modules/GMR_data_gen3.R')
 source('modules/fit_GMR.R')
 source('modules/network_commons.R')
 
-K <- 3
-d <- 10
+K <- 2
+d <- 2
 nobs <- 600       # Total number of observations
 G <- 10           # Number of groups in each component
 Rtot <- K*G       # Total number of groups
+nr <- nobs / Rtot # Number of observ. per group
+test_perc <- 0.2 # Percentage of data used for testing
 # N <- rep(3e2, K)  # Number of observations for each component
 #R <- rep(10, K)  # Number of groups in each component
 #Rtot <- sum(R)   # Total number of groups
 
 meanColSSQ <- function(X,Y) mean(colSums((X-Y)^2))
+rmse <- function(actual, predicted) sqrt(mean((actual - predicted)^2))
 # compute_nmi <- function (label1, label2){
 #   #require(clue)
 #   cl_agreement(as.cl_hard_partition(label1), as.cl_hard_partition(label2), method = 'NMI') 
@@ -24,7 +27,7 @@ meanColSSQ <- function(X,Y) mean(colSums((X-Y)^2))
 
 # combinations used in simulation
 total_num_runs <- 5
-runs <- expand.grid(run_id=1:total_num_runs, bet_dist=c(2,4,6), noise_lev=seq(2,10,2))
+runs <- expand.grid(run_id=1:total_num_runs, bet_dist=c(4,6,8), noise_lev=seq(2,10,2))
 
 # Run the simulations
 dt <- system.time(
@@ -37,12 +40,26 @@ for (r in 1:nrow(runs)) {
       tru_bets <- out$bets
       tru_obs_labels <- out$tru_labels #  true obs. labels :note the change to label"s" from label
       tru_grp_labels <- out$grp_labels # true group labels
-      nr <- tabulate(dat$idx) #as.vector(table(dat$idx))
+      # nr <- tabulate(dat$idx) #as.vector(table(dat$idx))
+      
+      # # Split into training and test
+      # nr_tst <- round(nr * test_perc)
+      # nr_tr <- nr - nr_tst
+      # tst_idx <- sample(1:nr, nr_tst)
+      # dat_tr = dat[ , .SD[!tst_idx], by = idx] #Training data
+      # dat_tst = dat[ , .SD[tst_idx], by = idx] #Test data
+
+      # Fit gmR
+      # fit <- fit_grp_mix_reg(dat_tr, K=K, d=d, n.gr=Rtot, nr=nr_tr, VERB=F)
       fit <- fit_grp_mix_reg(dat, K=K, d=d, n.gr=Rtot, nr=nr, VERB=F)
       
       est_grp_labels <- label_mat2vec(fit$tau) # cluster assignment for groups
       est_obs_labels <- est_grp_labels[dat$idx] # cluster assignment for individual obs.
       est_bets <- do.call(cbind,fit$beta) # estimated beta's
+      
+      # tau <- fit$tau
+      # predict_gmr(dat_tst, tau, est_bets)
+      # runs[r,"rmse"] <- rmse( dat_tst[, Yh],  dat_tst[, Y] )
       
       runs[r,"nmi"] <-  compute_mutual_info(tru_obs_labels, est_obs_labels)
       # runs[r,"nmi"] <-  compute_mutual_info(tru_grp_labels, est_grp_labels) 
@@ -58,7 +75,8 @@ runs2 <- runs %>%
   group_by(bet_dist, noise_lev) %>% 
   summarise(avg_nmi = mean(nmi, na.rm = T), 
             avg_n_iter=mean(n_iter, na.rm = T),
-            avg_beta_err = mean(beta_err, na.rm = T)) 
+            avg_beta_err = mean(beta_err, na.rm = T))
+            #avg_rmse = mean(rmse, na.rm=T)) 
 
 
 # Plot the results
@@ -96,3 +114,4 @@ custom_ggplot(runs2, aes(noise_lev, avg_n_iter, color=bet_dist), 'Average Number
 ggsave('niter.pdf')
 custom_ggplot(runs2, aes(noise_lev, avg_beta_err, color=bet_dist), 'Average error $\\beta$' )
 ggsave('beta_err')
+# custom_ggplot(runs2, aes(noise_lev, avg_rmse, color=bet_dist), 'Average RMSE' )
