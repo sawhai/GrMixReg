@@ -1,5 +1,5 @@
 # GrMixReg
-## Group Mixture of Regressions:
+## Group Mixture of Regressions
 
 This is an extension to the regular Finite Mixture of Regressions (FMR), which allows for known group structure among observations, in addition to their posibly unknown heterogeneity. The algorithm assigns groups (instead of individual observations) to clusters. Expectation Maximization (EM) is implemented and applied for this setup. In addition, a Maximum a Posterior (MAP) prediction density is developed. 
 
