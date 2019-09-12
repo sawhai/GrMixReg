@@ -1,19 +1,10 @@
 # GrMixReg
-Group Mixture of Regressions
+## Group Mixture of Regressions:
 
-The source code to reproduce the simulation study for GMR.
+This is an extension to the regular Finite Mixture of Regressions (FMR), which allows for known group structure among observations, in addition to their posibly unknown heterogeneity. The algorithm assigns groups (instead of individual observations) to clusters. Expectation Maximization (EM) is implemented and applied for this setup. In addition, a Maximum a Posterior (MAP) prediction density is developed. 
 
-GMR.K2.d2.R is the simulation code for the case k = 2 and dimension = 2.
+The code is to run a simulation study used in the paper.
 
-GMR.K4.d4.R is the simulation code for the case k = 4 and dimension = 4.
-
-GMR_data_gen.R is the code for generating the data (called by GMR.K2.d2.R and GMR.K4.d4.R)
-
-NMI.AMI.calc.fn.R is the code for NMI and AMI calculation (called by GMR.K2.d2.R and GMR.K4.d4.R)
-
-fit_GMR.R is the code to fit GMR (called by GMR.K2.d2.R and GMR.K4.d4.R)
-
-plot_Gr_EM2.R is the code for plotting simulation result.
 
 plot_predict_comparison.R is the code for plotting the comparison between MMCL++ and GMR.
 
