@@ -40,7 +40,7 @@ data_gen <- function(K, nobs, G, bet_dist, d, noise_level, normalize=T, VERB=T){
   
   R <- K*G # total number of groups
   if ( nobs %% R != 0) warning('nobs is not divisible by K*G ... rounding.')
-  nobs_per_grp <- round(nobs / R)
+  nobs_per_grp <- round(nobs / R)   # is nobs_per_grp = nr? if yes, do we need both loines?
   nr <- nobs / R # number of observations per group
   nobs_per_clust <- nobs / K
   

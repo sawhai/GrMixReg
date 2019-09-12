@@ -1,6 +1,6 @@
 # Function to fit GMR
 rowMaxs <- function(X) apply(X, 1, function(row) max(row))
-fit_grp_mix_reg <- function(dat, K, d, n.gr, nr, max.itr=1000, pi=NA, tau_init=NA, tol=1e-6, VERB=T) {
+fit_grp_mix_reg <- function(dat, K, d, max.itr=1000, pi=NA, tau_init=NA, tol=1e-6, VERB=T) {
   # Assuming columns 1:d of dat are X and column d+1 is Y
   # dat should be a data.table with columns labeld X1 X2 ... Y idx
   
@@ -12,10 +12,12 @@ fit_grp_mix_reg <- function(dat, K, d, n.gr, nr, max.itr=1000, pi=NA, tau_init=N
     pi = rep(1.,K)/K
   }
   
-  # let us make "nr" a vector if it is not already one
-  if (length(nr) != n.gr) {
-    nr <- rep(nr, n.gr)
-  }
+  # # let us make "nr" a vector if it is not already one
+  # if (length(nr) != n.gr) {
+  #   nr <- rep(nr, n.gr)
+  # }
+  nr <- tabulate(dat$idx)
+  n.gr <- length(nr)
   
   if (is.na(tau_init)){
     temp <- diag(K)
