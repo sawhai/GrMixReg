@@ -9,7 +9,7 @@ grp_mix_reg_gen_response <- function(dat, d, bets, clust, noise_sig) {
   noise_k <- noise_sig*rnorm(n_k)
   y <- Mu_k + noise_k
   dat[, Y := y]
-  
+  dat[, Mu := Mu_k]
 }
 
 
@@ -28,7 +28,7 @@ data_gen <- function(K, nobs, G, bet_dist, d, noise_level, normalize=T, VERB=T){
   nr <- nobs / R # number of observations per group
   nobs_per_clust <- nobs / K
   
-  mu <- matrix(0,ncol = d, nrow = K)  # Matrix to hold the means
+  mu <- matrix(0, ncol = d, nrow = K)  # Matrix to hold the means
   sigma <- lapply(1:K, function(k) gen_scaled_Wishart(50, d))
   B <- generate_equidistant_pts(d, K, bet_dist, VERB=VERB) #Get the points
   
@@ -37,7 +37,7 @@ data_gen <- function(K, nobs, G, bet_dist, d, noise_level, normalize=T, VERB=T){
     t <- data.table(mvrnorm(nobs_per_clust, mu[k,], sigma[[k]])) # the covariates
     if (normalize) t = t[, lapply(.SD, scale)]
     
-    grp_mix_reg_gen_response(t,d,B,k,noise_level)
+    grp_mix_reg_gen_response(t, d, B, k, noise_level)
     t[,tru.label := k]
     grp_idx  <- (k-1)*G + rep(1:G, nr)
     t[,idx := grp_idx]

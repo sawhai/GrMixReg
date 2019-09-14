@@ -1,5 +1,15 @@
 # Function to fit GMR
 rowMaxs <- function(X) apply(X, 1, function(row) max(row))
+# http://stats.stackexchange.com/questions/8605/column-wise-matrix-normalization-in-r
+row_normalize <- function(x) sweep(x, 1, rowSums(x), FUN="/")  # Can probably use matrix multiplication
+col_normalize <- function(x) sweep(x, 2, colSums(x), FUN="/")  # alternative t(t(x) / colSums(x))
+
+# http://stats.stackexchange.com/questions/126602/adding-a-value-to-each-element-of-a-column-in-r
+# http://stackoverflow.com/questions/24520720/subtract-a-constant-vector-from-each-row-in-a-matrix-in-r
+add_vec_to_each_row <- function(vec,mat) t(vec + t(mat))
+
+safe_exp <- function(X) exp(-rowMaxs(X)+X)
+
 fit_grp_mix_reg <- function(dat, K, d, max.itr=1000, pi=NA, tau_init=NA, tol=1e-6, VERB=T) {
   # Assuming columns 1:d of dat are X and column d+1 is Y
   # dat should be a data.table with columns labeld X1 X2 ... Y idx
@@ -35,16 +45,6 @@ fit_grp_mix_reg <- function(dat, K, d, max.itr=1000, pi=NA, tau_init=NA, tol=1e-
     rhoh[[r]] <- as.vector(t(X) %*% y) /nr[r]
   }
   if (VERB) cat('Done. \n')
-  
-  # http://stats.stackexchange.com/questions/8605/column-wise-matrix-normalization-in-r
-  row_normalize <- function(x) sweep(x, 1, rowSums(x), FUN="/")  # Can probably use matrix multiplication
-  col_normalize <- function(x) sweep(x, 2, colSums(x), FUN="/")  # alternative t(t(x) / colSums(x))
-  
-  # http://stats.stackexchange.com/questions/126602/adding-a-value-to-each-element-of-a-column-in-r
-  # http://stackoverflow.com/questions/24520720/subtract-a-constant-vector-from-each-row-in-a-matrix-in-r
-  add_vec_to_each_row <- function(vec,mat) t(vec + t(mat))
-  
-  safe_exp <- function(X) exp(-rowMaxs(X)+X)
   
   #Initialize tau for each group
   tau <- tau_init
@@ -112,6 +112,8 @@ predict_gmr <- function(dat, tau, bet) {
   }
   
 }
+
+
 
 ones <- function(m,n) matrix(rep(1,m*n),nrow=m)
 zeros <- function(m,n) matrix(rep(0,m*n),nrow=m)

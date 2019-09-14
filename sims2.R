@@ -1,6 +1,7 @@
 source('modules/GMR_data_gen4.R')
 source('modules/fit_GMR2.R')
 source('modules/network_commons.R')
+library(flexmix)
 
 meanColSSQ <- function(X,Y) mean(colSums((X-Y)^2))
 rmse <- function(actual, predicted) sqrt(mean((actual - predicted)^2))
@@ -21,6 +22,7 @@ run_simulations <- function(runs, test_perc=0.2) {
       
       #out <- data_gen(K, N, R, run$bet_dist, d, run$noise_lev, VERB=F)
       out <- data_gen(K, nobs, G, run$bet_dist, run$d, run$noise_lev, VERB=F)
+      #out <- data_gen(K, nobs, G, run$bet_dist, run$d, 5, VERB=F)
       dat <- out$data
       tru_bets <- out$bets
       
@@ -39,8 +41,8 @@ run_simulations <- function(runs, test_perc=0.2) {
       setcolorder(dat_tst,names(dat))
       tru_obs_labels <- dat_tr[,tru.label] #  true obs. labels :note the change to label"s" from label
       tru_grp_labels <- out$grp_labels # true group labels
-      dat_tr[, tru.label := NULL]
-      dat_tst[, tru.label := NULL]
+      #dat_tr[, tru.label := NULL]
+      #dat_tst[, tru.label := NULL]
       
       # Fit GMR
       fit <- fit_grp_mix_reg(dat_tr, K=K, d=d, VERB=F)
@@ -52,16 +54,49 @@ run_simulations <- function(runs, test_perc=0.2) {
       
       tau <- fit$tau
       predict_gmr(dat_tst, tau, est_bets)
-      runs[r,"rmse"] <- rmse( dat_tst[, Yh],  dat_tst[, Y] )
-      
-      # Fit simple lm model as a baseline
-      lm_fit <- lm(as.formula(paste("Y~ 0 +", paste(paste0("x", 1:d), collapse="+"))), dat_tr)
-      runs[r,"rmse_lm"] <- rmse( predict(lm_fit, dat_tst),  dat_tst[, Y] )
+      # runs[r,"rmse"] <- rmse( dat_tst[, Yh],  dat_tst[, Y] )
+      runs[r,"rmse"] <- rmse( dat_tst[, Yh],  dat_tst[, Mu] )
       
       runs[r,"nmi"] <-  compute_mutual_info(tru_obs_labels, est_obs_labels)
       # runs[r,"nmi"] <-  compute_mutual_info(tru_grp_labels, est_grp_labels) 
       runs[r,"n_iter"] <- fit$n.itr
       runs[r,"beta_err"] <- meanColSSQ(tru_bets[ , tru_grp_labels], est_bets[ , est_grp_labels])
+      
+      # Fit simple lm model as a baseline
+      lm_fit <- lm(as.formula(paste("Y~ 0 +", paste(paste0("x", 1:d), collapse="+"))), dat_tr)
+      # runs[r,"rmse_lm"] <- rmse( predict(lm_fit, dat_tst),  dat_tst$Y )
+      runs[r,"rmse_lm"] <- rmse( predict(lm_fit, dat_tst),  dat_tst$Mu )
+      
+      # Fit regular FMR t ocompare with GMR
+      # FMR is the same as GMR when all the observations are assumed to be in the same group
+      # dat_tr[,rs:=NULL]
+      # dat_tr$idx <- 1:nrow(dat_tr)
+      # fmr_fit <- fit_grp_mix_reg(dat_tr, K=K, d=d, VERB=F)
+      # 
+      # est_grp_labels <- label_mat2vec(fmr_fit$tau) # cluster assignment for groups
+      # est_obs_labels <- est_grp_labels[dat_tr$idx] # cluster assignment for individual obs.
+      # est_bets <- do.call(cbind,fmr_fit$beta) # estimated beta's
+      # 
+      # tau <- fmr_fit$tau
+      # dat_tst$idx <- 1:nrow(dat_tst)
+      # predict_gmr(dat_tst, tau, est_bets)
+      # runs[r,"rmse_fmr"] <- rmse( dat_tst[, Yh],  dat_tst[, Y] )
+       fmr_fit <- flexmix(as.formula(paste("Y~ 0 +", paste(paste0("x", 1:d), collapse="+"))), dat_tr, k = run$K)
+       bet_fmr <- parameters(fmr_fit)[1:K,]
+       
+       runs[r,"nmi_fmr"] <- compute_mutual_info(tru_obs_labels, clusters(fmr_fit))
+       
+       xcol_names <- paste0("x", 1:d)
+       # dat_tst_df <- as.data.frame(dat_tst[, names(dat_tst) %in% c(xcol_names,'Y'),with=F])
+       dat_tst_df <- as.data.frame(dat_tst[, c(xcol_names,'Y'),with=F])
+       dat_tst$fmr_clust <- clusters(fmr_fit, newdata = dat_tst_df)
+       
+       
+       for(u in 1:nrow(dat_tst)){
+         dat_tst[u,'yh_fmr'] <- as.matrix(dat_tst[u, xcol_names, with=F]) %*% bet_fmr[, dat_tst$fmr_clust[u]] 
+       }
+      # runs[r,"rmse_fmr"] <- rmse(dat_tst$yh_fmr,  dat_tst$Y )
+      runs[r,"rmse_fmr"] <- rmse(dat_tst$yh_fmr,  dat_tst$Mu )
     }
   )["elapsed"]
   cat("Total runtime = ", dt, "(s)\n")
