@@ -1,66 +1,57 @@
 #Functions that are called for generating data
+require(MASS)
 #To generate response (called by data_gen)
 grp_mix_reg_gen_response <- function(dat, d, bets, clust, noise_sig) {
   # Generate response. More general. Changes "dat" in place (pass by reference)
   K = clust
   n_k <- nrow(dat)
-  Mu_k <- as.matrix(dat[, 1:d, with=F]) %*% bets[K,]  
+  Mu_k <- as.matrix(dat[, 1:d, with=F]) %*% bets[ , K]  
   noise_k <- noise_sig*rnorm(n_k)
-  
+  y <- Mu_k + noise_k
+  dat[, Y := y]
   dat[, Mu := Mu_k]
-  dat[, noise := noise_k]
-  
-  dat[, Y := Mu + noise]
-  
 }
 
-#Data preparation ------
-# K   := number of components
-# # R := vector containing Number of groups in each component
-# # r := value to control the distance between betas
-# # noise_level := noise signal when generating y
-# # d := dimension (number) of covariates
-data_gen <- function(K,N,R,r,d,noise_level){
+
+# --- Simulated data generation ---
+# K    := number of components
+# G    := number of groups in each component
+# nobs := total number of observations 
+# bet_dist := pairwise distance between betas (scalar)
+# noise_level := noise signal when generating y
+# d    := dimension (number) of covariates
+data_gen <- function(K, nobs, G, bet_dist, d, noise_level, normalize=T, VERB=T){
   
-  Rtot <- sum(R)  #Total number of groups
-  cumsumR <- cumsum(c(0,R))
-  mu <- matrix(0,ncol = d, nrow = K)  #Matrix to hold the means
-  sig2 <- abs(rnorm(K,1,0))
-  for(i in 1:K){
-    do.call('<-',list(paste0('rn',i),abs(rnorm(1,0,sig2[i]))))
-  }
+  R <- K*G # total number of groups
+  if ( nobs %% R != 0) warning('nobs is not divisible by K*G ... rounding.')
+  nobs_per_grp <- round(nobs / R)   
+  nr <- nobs / R # number of observations per group
+  nobs_per_clust <- nobs / K
   
-  for(i in 1:K){
-    do.call('<-',list(paste0('m',i),abs(rnorm(K,0,sig2[i]))))
-  }
+  mu <- matrix(0, ncol = d, nrow = K)  # Matrix to hold the means
+  sigma <- lapply(1:K, function(k) gen_scaled_Wishart(50, d))
+  B <- generate_equidistant_pts(d, K, bet_dist, VERB=VERB) #Get the points
   
-  sigma <- list()
-  for(i in 1:K){
-    sigma[[i]] <- gen_scaled_Wishart(50, d)
-  }
-  B <- generate_equidistant_pts(d,K,r) #Get the points
-  #Normalize them
-  dist <- round(norm(B[,1]-B[,2],type='2'))
-  #Generate the grouped data
-  X <- list()
-  #index <- list()
   X <- data.table()
   for (k in 1:K) {
-    t <- data.table(mvrnorm(N[k],mu[k,],sigma[[k]]))
+    t <- data.table(mvrnorm(nobs_per_clust, mu[k,], sigma[[k]])) # the covariates
+    if (normalize) t = t[, lapply(.SD, scale)]
     
-    idx <- rep(k,nrow(t))
-    grp_mix_reg_gen_response(t,d,B,k,noise_level)
-    t[,tru.label :=k]
-    t[,idx := rep((cumsumR[k]+1):cumsumR[k+1],N[1]/R[1])]
+    grp_mix_reg_gen_response(t, d, B, k, noise_level)
+    t[,tru.label := k]
+    grp_idx  <- (k-1)*G + rep(1:G, nr)
+    t[,idx := grp_idx]
+    
     X <- rbind(X,t)
     
   }
-  names <- rep('x',K)
-  for(i in 1:K){
-    names[i] <- paste0('x',i)
-  }
-  names(X)[1:K] <- names
-  return(list(bets = B, X = X,dist = dist))
+  grp_labels <- rep(1:K, each=G)
+ 
+  tru_labels <- X[, tru.label]
+  # X[, tru.label := NULL]
+  # names(X)[1:K] <- sapply(1:K, function(i) paste0('x',i))
+  names(X)[1:d] <- sapply(1:d, function(i) paste0('x',i))
+  return(list(bets = B, data = X, tru_labels = tru_labels, grp_labels=grp_labels))
   
 }
 
@@ -70,7 +61,7 @@ gen_scaled_Wishart <- function(N, p, Sigma =  diag(p)) {
   t(X) %*% X / N
 }
 
-
+# used in generating equidistant points
 rotation = function(x,y){
   u=x/sqrt(sum(x^2))
   
@@ -87,12 +78,13 @@ rotation = function(x,y){
 
 scalar1 <- function(x) {x / sqrt(sum(x^2))}
 ##################################################################
-#Funtion to generate equidistance points used to generate betas
-#dim := the dimension of the betas
-#num.pts := number of betas that we wish to generate
-#rd := the disired distance between the points
-generate_equidistant_pts <- function(dim,num.pts,rd){
-  #desired distance 
+# Funtion to generate equidistance points used to generate betas
+# dim      := the dimension of the betas
+# num.pts  := number of betas that we wish to generate
+# rd       := the disired distance between the points
+# VERB     := (True/Fale) Print diagnostics
+generate_equidistant_pts <- function(dim, num.pts, rd, VERB=T){
+  
   dns = 2   #initial distance between pair of points
   pns <- matrix(rep(0,dim*(dim+1)),ncol=(dim+1))   #matrix to hold the points on its columns
   pns[,1] <- c(1,rep(0,(dim-1))); pns[,2] <- c(-1,rep(0,(dim-1))) #initialize the first two points
@@ -111,13 +103,27 @@ generate_equidistant_pts <- function(dim,num.pts,rd){
   #Rotate
   #create two normalized random points to calculate the rotation matrix
   a1 <- scalar1(runif(dim,-2,2)); a2 <- scalar1(runif(dim,-2,2))  
+  
   #Calculate the rotation matrix
   Rot.mat <- rotation(a1,a2)
   p <- Rot.mat %*% pns #Rotate the points
+  
   #randomly pick whatever number of points you desire
   u <- sample(1:(dim+1),num.pts)
   p <- p[,u]
+  
+  # center the points and rescale to have the desired distance
+  curr_dist <- sqrt(sum((p[,1] - p[,2])^2))
+  p <- (rd/curr_dist) * sweep(p,1, rowMeans(p),"-")
+  
+  # print diagnostic: see if the points are really equi-distant
+  if (VERB) {
+    pwdist <- dist(t(p)) # pairwise distances of columns of B
+    pwd_dist_cv <- sd(pwdist)/mean(pwdist)
+    cat("Coeff of Var. of pairwaise distnces of points =", ifelse(is.na(pwd_dist_cv), 0, pwd_dist_cv),"\n")
+    cat("dist(p[,1], p[,2]) =", pwdist[1],"\n")
+  }  
+    
   p
   
 }
-

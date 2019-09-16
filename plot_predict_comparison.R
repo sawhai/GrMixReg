@@ -1,6 +1,6 @@
 rm(list=ls())
 # setwd("/Users/ha/Documents/Gr.EM/")
-res <- get(load('pred_compare.RData'))
+res <- get(load('data/pred_compare.RData'))
 
 library('data.table')
 library('ggplot2')

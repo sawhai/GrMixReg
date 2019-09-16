@@ -1,16 +1,18 @@
-library(dplyr)
-# library(clue)
 library(data.table)
+library(dplyr)
+library(MASS)
+library(flexmix)
 library(ggplot2)
 library(latex2exp)
-rm(list=ls())
+
+rm(list=ls())     # clear the workspace
+
 d <- 4            # The dimension of data, i.e., number of covariates.
-K <- 4
-# The number of components. This code needs K <= d+1, since we generate equidistant components beta's
-nobs <- 200       # Total number of observations
+K <- 4            # The number of (true) components. This code needs K <= d+1, since we generate equidistant components beta's
+nobs <- 400       # Total number of observations
 test_perc <- 0.2  # Percentage of data used for testing
 
-total_num_runs <- 20   # number of replications. Reduce to speed up the simulation.
+total_num_runs <- 5   # number of replications. Reduce to speed up the simulation.
 
 # combinations used in simulation
 runs <- expand.grid(run_id=1:total_num_runs,
@@ -23,9 +25,9 @@ runs <- expand.grid(run_id=1:total_num_runs,
                     d=d)
 
 # Run the simulations
-source("Sim_k2.R")
+source("modules/sims.R")
+set.seed(1234)
 runs <- find_optimal_k_cv(runs, test_perc = test_perc)
-#runs <- optimal_k_cv(runs, tru_k = K,min_k,max_k,test_perc = test_perc)
 
 # Calculate the averages
 runs2 <- runs %>%
