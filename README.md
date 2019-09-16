@@ -3,7 +3,7 @@
 This repository contains the code to run the simulation study used in the paper "Performance Evaluation of Automotive
 Dealerships using Grouped Mixture of Regressions".
 
-The paper introduces Grouped Mixture of Regressions (GMR) as an extension of the regular Finite Mixture of Regressions (FMR). GMR allows for known group structure among observations, in addition to their posibly unknown heterogeneity. The fitting algorithm assigns groups (instead of individual observations) to clusters. Expectation Maximization (EM) is implemented and applied to fit this model. In addition, a Maximum a Posterior (MAP) prediction density is developed. 
+The paper introduces Grouped Mixture of Regressions (GMR) as an extension of the regular Finite Mixture of Regressions (FMR). GMR allows for known group structure among observations, in addition to their posibly unknown heterogeneity. The fitting algorithm assigns groups (instead of individual observations) to clusters. An Expectation Maximization (EM) algorithm is developed  to fit this model. In addition, the Maximum a Posterior (MAP) prediction for new observations is derived and implemented. 
 
 The code can be used to recreate the simulation study in the paper, as detailed below. The easiest way is perhaps to open  the project file `GrMixReg.Rproj` in RStudio and then run each of the simulation files below.
 
