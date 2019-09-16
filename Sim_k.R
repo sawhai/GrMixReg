@@ -15,20 +15,20 @@ predict_by_mean <- function(true_ytrain,ytest){
 
 #Function to predict test data using a linear regression model ---------
 single_lm <- function(tr.data,tst.data){
-  tr.dat <- tr.data[,c('x1','x2','x3','x4','Y'),with=F]
-  lm.model <- lm(Y ~ .,tr.dat)
+  cols <- c(paste0('x',1:(ncol(tst.data)-4)),'Y')
+  tr.data <- tr.data[, ..cols]
+  #tr.dat <- tr.data[,c('x1','x2','x3','x4','Y'),with=F]
+  lm.model <- lm(Y ~ .,tr.data)
   yh <- predict(lm.model,tst.data)
   yh
 }
 
 # Execute main simulation loop
-optimal_k_cv <- function(runs, tru_k,test_perc=0.2) {
+optimal_k_cv <- function(runs,tru_k,min_k,max_k,test_perc=0.2) {
   cat('Running simullations...\n')
   r <- 1
   dt <- system.time(
-    #for (r in 1:nrow(runs)) {
     while (r <= nrow(runs)){
-      cat(sprintf('Run %4d out of %d\r', r, nrow(runs))) 
       run <- runs[r,]
       
       G <- run$G
@@ -58,8 +58,11 @@ optimal_k_cv <- function(runs, tru_k,test_perc=0.2) {
       setcolorder(dat_tr,names(dat)) #Change the order of the columns
       setcolorder(dat_tst,names(dat))
 
-      for(n in 0:8){
-        try({
+      for(n in min_k:max_k){
+        #cat('Run ', r,'\n')
+        tryCatch({
+          cat(sprintf('Run %4d out of %d\r', r, nrow(runs)))
+          
           K <- runs$K[r]
           if(K ==0 ){
             yh <- predict_by_mean(dat_tr[, Y], dat_tst[, Y])
@@ -82,7 +85,7 @@ optimal_k_cv <- function(runs, tru_k,test_perc=0.2) {
             runs[r,"rmse"] <- rmse( dat_tst[, Yh],  dat_tst[, Y] ) 
             r <- r +1
           }
-        }, silent = T)
+        }, error=function(e){cat("ERROR : GMR failed to converge \n")})
         
       }
       

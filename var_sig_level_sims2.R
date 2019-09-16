@@ -10,7 +10,7 @@ K <- 2
 nobs <- 600       # Total number of observations
 test_perc <- 0.2  # Percentage of data used for testing
 
-total_num_runs <- 5   # number of replications. Reduce to speed up the simulation.
+total_num_runs <- 1   # number of replications. Reduce to speed up the simulation.
 
 # combinations used in simulation
 runs <- expand.grid(run_id=1:total_num_runs, 
