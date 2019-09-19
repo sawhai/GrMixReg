@@ -13,10 +13,7 @@ The following are the main simulation files:
 * `var_sig_level_sims.R` runs the simulations with variable noise level.
 * `var_grp_size_sims.R` runs the simulations with variable numer of groups (G).
 * `find_optimal_k.R` runs the simulations to find the optimal K (number of clusters) using cross-validation.
-
-The following use results form simulations ran elsewhere to plot comparison plots:
-
-* `plot_predict_comparison.R`plots the comparison between MMCL++ and GMR, using the 
+* `MMCL_vs_GMR.R` plots the comparison between MMCL++ and GMR, using the 
 
 The .RData files in `data/` folder are the results saved and used for plotting.
 
