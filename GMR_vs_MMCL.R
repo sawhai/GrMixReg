@@ -2,7 +2,7 @@ rm(list=ls())
 library(data.table)
 library(dplyr)
 library(MASS)
-library(flexmix)
+library(tidyr)
 library(ggplot2)
 library(latex2exp)
 

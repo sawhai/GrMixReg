@@ -155,6 +155,7 @@ fit_mmcl <- function(data,k,R,d,cols,num.itr=50,tol=0.0001,verb=F){
 
 # Plot
 
+
 mmcl_ggplot <- function( data, aesth_map, title, xlab,labs){
   ggplot(data, aesth_map) + 
     geom_point(size=4.5,shape=1) +
