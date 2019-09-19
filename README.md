@@ -13,7 +13,7 @@ The following are the main simulation files:
 * `var_sig_level_sims.R` runs the simulations with variable noise level.
 * `var_grp_size_sims.R` runs the simulations with variable numer of groups (G).
 * `find_optimal_k.R` runs the simulations to find the optimal K (number of clusters) using cross-validation.
-* `MMCL_vs_GMR.R` plots the comparison between MMCL++ and GMR, using the 
+* `MMCL_vs_GMR.R` plots the comparison between MMCL++ and GMR. 
 
 ## Modules
 The following modules are used:
