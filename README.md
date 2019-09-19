@@ -15,8 +15,6 @@ The following are the main simulation files:
 * `find_optimal_k.R` runs the simulations to find the optimal K (number of clusters) using cross-validation.
 * `MMCL_vs_GMR.R` plots the comparison between MMCL++ and GMR, using the 
 
-The .RData files in `data/` folder are the results saved and used for plotting.
-
 ## Modules
 The following modules are used:
 
